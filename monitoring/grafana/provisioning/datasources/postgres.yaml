@@ -1,0 +1,17 @@
+apiVersion: 1
+
+datasources:
+  - name: inference-logs
+    type: postgres
+    access: proxy
+    url: db:5432
+    database: mlops_db
+    user: ai_user
+    secureJsonData:
+      password: securepassword
+    jsonData:
+      sslmode: disable
+      postgresVersion: 1500
+      timescaledb: false
+    isDefault: true
+    editable: false

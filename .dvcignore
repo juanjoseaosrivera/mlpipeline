@@ -1,0 +1,5 @@
+# Patterns that DVC should ignore. One per line.
+.git/
+.venv/
+node_modules/
+__pycache__/
