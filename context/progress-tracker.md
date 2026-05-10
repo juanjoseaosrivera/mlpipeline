@@ -1,8 +1,8 @@
 # Progress Tracker
 
 - **Last updated:** 2026-05-10
-- **Current phase:** v2.0 build-out complete (P5 awaits visibility unblock for branch protection)
-- **Overall status:** All seven phases implemented. P0–P4 🟢, P5 🟡 90% (B-01 blocker on branch protection), P6 🟢. All four user stories closed. Backend, frontend, data ops, drift detection, Grafana dashboards, and retraining workflow are wired.
+- **Current phase:** v2.0 build-out complete
+- **Overall status:** All seven phases implemented and tracked. P0–P6 🟢. All four user stories closed. Repository public; ruleset on `main` requires the four CI status checks and a PR before merge.
 
 ## 1. Snapshot
 
@@ -13,7 +13,7 @@
 | P2    | Inference API              | 🟢 Done       | 100%     | 2026-05-10 |
 | P3    | Persistence                | 🟢 Done       | 100%     | 2026-05-10 |
 | P4    | UI                         | 🟢 Done       | 100%     | 2026-05-10 |
-| P5    | CI/CD                      | 🟡 In progress | 90%      | blocked on visibility |
+| P5    | CI/CD                      | 🟢 Done       | 100%     | 2026-05-10 |
 | P6    | Data ops + drift           | 🟢 Done       | 100%     | 2026-05-10 |
 
 Status icons: 🟢 Done · 🟡 In progress · 🔵 Blocked · ⚪ Not started · 🔴 At risk.
@@ -161,7 +161,7 @@ Status icons: 🟢 Done · 🟡 In progress · 🔵 Blocked · ⚪ Not started �
 - [x] Images pushed to a registry on merges to `main`
 
 ### Gates
-- [ ] 🔵 Branch protection on `main`: tests required, image build required — **blocked**: requires GitHub Pro or public repo (free private repos return HTTP 403 on both `branches/main/protection` and `rulesets` endpoints). Resolve by flipping the repo to public (`gh repo edit --visibility public --accept-visibility-change-consequences`) or upgrading the plan; the required-status-check contexts (`Backend (Pytest)`, `Frontend (Vitest)`, `Backend image`, `Frontend image`) are documented and ready to apply.
+- [x] Branch protection on `main`: tests required, image build required — repo flipped to public; ruleset id `16201544` (`main protection`) is active with rules: `deletion`, `non_fast_forward`, `pull_request` (PRs required, 0 approvals minimum), and `required_status_checks` strict-mode over `Backend (Pytest)`, `Frontend (Vitest)`, `Backend image`, `Frontend image`.
 - [x] Pipeline duration tracked; target under 10 minutes (`timeout-minutes: 10` on every job; concurrency group cancels superseded runs)
 
 **Exit criteria:** A PR cannot merge into `main` without green tests and successful image builds for both services, and the full pipeline completes in under 10 minutes.
@@ -235,10 +235,11 @@ ADR full text lives in `docs/adr/NNNN-*.md` (to be added).
 
 | ID  | Item | Impact | Owner | Status |
 | --- | ---- | ------ | ----- | ------ |
-| B-01 | Branch protection on `main` returns 403 from both `protection` and `rulesets` endpoints on the free-plan private repo. | P5 exit criterion ("a PR cannot merge into main without green tests") cannot be enforced at the platform layer. | repo owner | 🔵 Open — flip repo to public OR upgrade to GitHub Pro; status-check contexts already named and ready. |
+| B-01 | ~~Branch protection on `main` returns 403 from both `protection` and `rulesets` endpoints on the free-plan private repo.~~ | ~~P5 exit criterion ("a PR cannot merge into main without green tests") cannot be enforced at the platform layer.~~ | repo owner | 🟢 Resolved 2026-05-10 — repo flipped to public; ruleset `16201544` enforces the four CI checks and PR-only changes on `main`. |
 
 ## 14. Recent updates
 
+- **2026-05-10** — Phase 5 closed: repo visibility flipped to public (`gh repo edit --visibility public --accept-visibility-change-consequences`), then ruleset `16201544` ("main protection") created on the default branch enforcing `deletion`, `non_fast_forward`, `pull_request` (PR required, 0 approvals minimum), and `required_status_checks` strict-mode over `Backend (Pytest)`, `Frontend (Vitest)`, `Backend image`, `Frontend image`. B-01 resolved. All seven phases now 🟢.
 - **2026-05-10** — Phase 6 (Data ops + drift) complete: DVC scaffolded — `dvc.yaml` defines `prepare` (runs `src.models.prepare`, outputs `data/raw/dataset.csv`) and `train` (runs `src.models.train`, depends on the csv + scripts); `.dvc/config` carries an `s3://...REPLACE_ME` remote placeholder; `.dvcignore` and `.gitignore` exclude `data/raw/` and `.dvc/{cache,tmp,config.local}`. Drift detector at `backend/src/drift/detector.py`: two-sample KS test (`scipy.stats.ks_2samp`) per feature over `recent` vs `reference` windows (defaults 500/500), transactional `UPDATE inference_logs SET is_drift_detected = TRUE` over the recent window when any feature's p-value crosses `ALPHA=0.01`, exits 0/1/2 (no drift / insufficient data / drift) so cron callers can branch. Three drift tests: same distribution → no flags, shifted (mean +3σ) → all 200 recent rows flagged, insufficient rows → `sufficient_data=False`. Grafana service added to `docker-compose.yml` (`grafana/grafana:11.2.2` on `:3000`, `grafana_data` volume, provisioning bind-mount); datasource (`postgres → db:5432/mlops_db`) and dashboards provider (`/var/lib/grafana/dashboards`) auto-loaded; `drift.json` panels: predictions/min, drift-rate/min, P95 latency with 150ms threshold marker, predicted-class distribution (24h default range). Retraining workflow `.github/workflows/retrain.yml`: triggers on `workflow_dispatch` (with seed input), `repository_dispatch: drift_detected`, and a Monday 06:00 UTC cron safety net; conditional `dvc pull` when AWS creds are present; runs `python -m src.models.train` with the run number as seed; ends with an explicit `::notice::` reminding that promotion to `Production` is manual. `scipy==1.14.1` and `dvc[s3]==3.55.2` added to requirements. US-04 closed.
 - **2026-05-10** — Phase 5 (CI/CD) mostly complete: workflow rewritten — `Backend (Pytest)` runs ruff + mypy + pytest with `--cov-fail-under=80` (pyproject `[tool.pytest.ini_options]` enforces the gate); `Frontend (Vitest)` runs `npm test -- --coverage` against `vitest.config.ts` thresholds (lines/functions/branches/statements all 80%) + `ng build`; `Backend image` / `Frontend image` jobs build with `docker/build-push-action@v6` and `cache-{to,from}: type=gha` on every PR, pushing `ghcr.io/<owner>/mlpipeline-{backend,frontend}:{latest,<sha>}` only on pushes to `main`; `timeout-minutes: 10` on every job and `cancel-in-progress` concurrency group keeps the budget. Coverage artifacts uploaded on every run. Branch protection blocked (B-01): free private repos return 403 on both `branches/main/protection` and `rulesets` REST endpoints — resolved by flipping visibility or upgrading the plan.
 - **2026-05-10** — Phase 4 (UI) complete: typed wire models in `frontend/src/app/models/prediction.model.ts` mirror the Pydantic schemas (plus a tagged-union `PredictionError`); `MlService` POSTs to `${environment.apiBaseUrl}/api/predict` via `inject(HttpClient)`, maps `HttpErrorResponse` to `network | validation | server | unknown` via `catchError`; `PredictionFormComponent` is fully signal-based (per-field `signal()` + `computed()` errors + `canSubmit` gates submit while pending) with OnPush and zoneless control flow (`@if`/`@switch`/`@case`); `ResultPanelComponent` renders empty / loading-skeleton (`animate-pulse motion-reduce:animate-none`) / success / error with a Retry output; `PredictionWorkbenchComponent` owns `pending`/`result`/`error`/`lastPayload` signals, derives the panel's state through `computed()`, and replays the last payload on retry. Tailwind v4 tokens in `src/styles.css` cover color/font/radius/shadow (CSS-first via `@theme`); dark-mode-first wired via `@variant dark`. Vitest specs: `MlService` covers POST + status 422/500/0 mapping; `PredictionFormComponent` covers initial-invalid / valid-when-fields-set / category < 0 invalid / emit-on-valid-submit / no-emit-when-invalid / no-emit-while-pending / button-disabled-when-pending; `ResultPanelComponent` covers empty / loading / success render + retry output. `RecentPredictionsTableComponent` deferred (no read endpoint in scope). US-01 closed.
