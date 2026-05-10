@@ -10,5 +10,8 @@ class Settings(BaseSettings):
     model_uri: str = "models:/ProductionModel/latest"
     experiment_name: str = "intelligent-detection-platform"
 
+    allowed_origins: tuple[str, ...] = ("http://localhost", "http://localhost:4200")
+    enable_docs: bool = False
+
 
 settings = Settings()
