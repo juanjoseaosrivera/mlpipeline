@@ -1,0 +1,79 @@
+<form (submit)="$event.preventDefault(); submit()" class="space-y-4" novalidate>
+  <h2 class="text-sm font-semibold text-neutral-300">Prediction form</h2>
+
+  <div class="space-y-1">
+    <label for="feature_1" class="block text-xs text-neutral-400">feature_1</label>
+    <input
+      id="feature_1"
+      type="number"
+      step="any"
+      inputmode="decimal"
+      [value]="feature_1() ?? ''"
+      (input)="onInput('feature_1', $any($event.target).value)"
+      (blur)="onBlur('feature_1')"
+      [disabled]="pending()"
+      class="w-full font-mono tabular-nums bg-neutral-900 border border-neutral-800 rounded-sm px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-(--color-accent-500) disabled:opacity-50"
+      [class.border-(--color-error-500)]="touched().feature_1 && errors().feature_1"
+      aria-describedby="feature_1-error"
+    />
+    @if (touched().feature_1 && errors().feature_1) {
+      <p id="feature_1-error" class="text-xs text-(--color-error-500)" aria-live="polite">
+        A numeric value is required.
+      </p>
+    }
+  </div>
+
+  <div class="space-y-1">
+    <label for="feature_2" class="block text-xs text-neutral-400">feature_2</label>
+    <input
+      id="feature_2"
+      type="number"
+      step="any"
+      inputmode="decimal"
+      [value]="feature_2() ?? ''"
+      (input)="onInput('feature_2', $any($event.target).value)"
+      (blur)="onBlur('feature_2')"
+      [disabled]="pending()"
+      class="w-full font-mono tabular-nums bg-neutral-900 border border-neutral-800 rounded-sm px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-(--color-accent-500) disabled:opacity-50"
+      [class.border-(--color-error-500)]="touched().feature_2 && errors().feature_2"
+      aria-describedby="feature_2-error"
+    />
+    @if (touched().feature_2 && errors().feature_2) {
+      <p id="feature_2-error" class="text-xs text-(--color-error-500)" aria-live="polite">
+        A numeric value is required.
+      </p>
+    }
+  </div>
+
+  <div class="space-y-1">
+    <label for="category" class="block text-xs text-neutral-400">category</label>
+    <input
+      id="category"
+      type="number"
+      step="1"
+      min="0"
+      inputmode="numeric"
+      [value]="category() ?? ''"
+      (input)="onInput('category', $any($event.target).value)"
+      (blur)="onBlur('category')"
+      [disabled]="pending()"
+      class="w-full font-mono tabular-nums bg-neutral-900 border border-neutral-800 rounded-sm px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-(--color-accent-500) disabled:opacity-50"
+      [class.border-(--color-error-500)]="touched().category && errors().category"
+      aria-describedby="category-error"
+    />
+    @if (touched().category && errors().category) {
+      <p id="category-error" class="text-xs text-(--color-error-500)" aria-live="polite">
+        A non-negative integer is required.
+      </p>
+    }
+  </div>
+
+  <button
+    type="submit"
+    [disabled]="!canSubmit()"
+    class="w-full bg-(--color-accent-500) text-neutral-950 rounded-sm px-4 py-2 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-(--color-accent-500) focus:ring-offset-2 focus:ring-offset-neutral-950"
+    data-testid="submit"
+  >
+    {{ pending() ? 'Predicting…' : 'Predict' }}
+  </button>
+</form>

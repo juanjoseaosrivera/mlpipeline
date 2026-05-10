@@ -1,0 +1,13 @@
+<section class="grid gap-6 md:grid-cols-2 max-w-5xl">
+  <div class="rounded-md border border-neutral-800 p-6 shadow-(--shadow-card)">
+    <app-prediction-form [pending]="pending()" (submitted)="onSubmit($event)" />
+  </div>
+  <div class="rounded-md border border-neutral-800 p-6 shadow-(--shadow-card)">
+    <app-result-panel
+      [state]="state()"
+      [result]="result()"
+      [error]="error()"
+      (retry)="onRetry()"
+    />
+  </div>
+</section>
