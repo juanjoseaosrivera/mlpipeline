@@ -1,7 +1,8 @@
-"""Unit tests for POST /api/predict with a fake model.
+"""Unit tests for POST /api/predict with a fake model and sqlite session.
 
-The fake exposes the sklearn contract (`predict`, `predict_proba`) so the
-endpoint code is exercised end-to-end without touching MLflow.
+The fake model exposes the sklearn contract (`predict`, `predict_proba`) so
+the endpoint code is exercised end-to-end without MLflow. The session
+factory comes from `conftest.py` (sqlite in-memory).
 """
 
 from __future__ import annotations
@@ -13,6 +14,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.api.config import Settings
+from src.api.db.session import SessionFactory
 from src.api.main import create_app
 
 
@@ -43,8 +45,12 @@ def cfg() -> Settings:
 
 
 @pytest.fixture
-def client(cfg: Settings) -> TestClient:
-    app = create_app(cfg=cfg, model_loader=lambda _c: (FakeModel(), "fixture-v1"))
+def client(cfg: Settings, session_factory: SessionFactory) -> TestClient:
+    app = create_app(
+        cfg=cfg,
+        model_loader=lambda _c: (FakeModel(), "fixture-v1"),
+        session_factory=session_factory,
+    )
     return TestClient(app)
 
 
@@ -82,8 +88,14 @@ def test_predict_rejects_negative_category(client: TestClient) -> None:
     assert response.status_code == 422
 
 
-def test_predict_returns_500_on_inference_failure(cfg: Settings) -> None:
-    app = create_app(cfg=cfg, model_loader=lambda _c: (ExplodingModel(), "fixture-v1"))
+def test_predict_returns_500_on_inference_failure(
+    cfg: Settings, session_factory: SessionFactory
+) -> None:
+    app = create_app(
+        cfg=cfg,
+        model_loader=lambda _c: (ExplodingModel(), "fixture-v1"),
+        session_factory=session_factory,
+    )
     client = TestClient(app)
     response = client.post(
         "/api/predict",

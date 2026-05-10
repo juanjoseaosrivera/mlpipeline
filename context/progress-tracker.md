@@ -1,8 +1,8 @@
 # Progress Tracker
 
 - **Last updated:** 2026-05-10
-- **Current phase:** Phase 3 — Persistence
-- **Overall status:** Phases 0, 1, and 2 complete. `/api/predict` is live with the model loaded as a lifespan singleton, latency measured around the inference call only, and unit / integration / P95-latency tests in place. Ready for Phase 3 (Persistence).
+- **Current phase:** Phase 4 — UI
+- **Overall status:** Phases 0–3 complete. PostgreSQL persistence on the critical path of `/api/predict`; row shape mirrors PRD Section 5.2; row-write and DB-unavailable paths both tested. US-03 closed. Ready for Phase 4 (UI).
 
 ## 1. Snapshot
 
@@ -11,7 +11,7 @@
 | P0    | Scaffolding                | 🟢 Done       | 100%     | 2026-05-10 |
 | P1    | Model + Registry           | 🟢 Done       | 100%     | 2026-05-10 |
 | P2    | Inference API              | 🟢 Done       | 100%     | 2026-05-10 |
-| P3    | Persistence                | ⚪ Not started | 0%       | TBD     |
+| P3    | Persistence                | 🟢 Done       | 100%     | 2026-05-10 |
 | P4    | UI                         | ⚪ Not started | 0%       | TBD     |
 | P5    | CI/CD                      | ⚪ Not started | 0%       | TBD     |
 | P6    | Data ops + drift           | ⚪ Not started | 0%       | TBD     |
@@ -107,18 +107,18 @@ Status icons: 🟢 Done · 🟡 In progress · 🔵 Blocked · ⚪ Not started �
 > Goal: Persist every successful inference to PostgreSQL and verify the schema supports drift queries.
 
 ### Schema
-- [ ] Alembic initialized
-- [ ] Migration creates `inference_logs` per PRD Section 5.2
-- [ ] `idx_timestamp` index in place
+- [x] Alembic initialized
+- [x] Migration creates `inference_logs` per PRD Section 5.2
+- [x] `idx_timestamp` index in place
 
 ### Write path
-- [ ] SQLAlchemy session dependency wired into FastAPI
-- [ ] Inference handler inserts a row on success
-- [ ] Insertion failure returns HTTP 500 (no silent swallowing)
+- [x] SQLAlchemy session dependency wired into FastAPI
+- [x] Inference handler inserts a row on success
+- [x] Insertion failure returns HTTP 500 (no silent swallowing)
 
 ### Tests
-- [ ] Integration test asserts the row shape matches the PRD schema
-- [ ] Test for the "DB unavailable" error path
+- [x] Integration test asserts the row shape matches the PRD schema
+- [x] Test for the "DB unavailable" error path
 
 **Exit criteria:** Every successful prediction in dev produces exactly one `inference_logs` row with correct values for all required columns.
 
@@ -193,7 +193,7 @@ Status icons: 🟢 Done · 🟡 In progress · 🔵 Blocked · ⚪ Not started �
 | ----- | ----------------- | -------------------------------------------------------------------------------------- | -------- | ----- | -------------- |
 | US-01 | End user          | Submit a validated form and receive a prediction with probability and latency.         | P0       | P2/P4 | ⚪ Not started |
 | US-02 | ML engineer       | Every successful training is automatically registered in MLflow.                       | P0       | P1    | 🟢 Done       |
-| US-03 | SRE / ML engineer | Every successful prediction is auditable in PostgreSQL with timestamp and latency.     | P0       | P3    | ⚪ Not started |
+| US-03 | SRE / ML engineer | Every successful prediction is auditable in PostgreSQL with timestamp and latency.     | P0       | P3    | 🟢 Done       |
 | US-04 | Data scientist    | Monitor data drift via Grafana and trigger retraining when thresholds are breached.    | P1       | P6    | ⚪ Not started |
 
 ## 10. Evaluation metrics (latest run)
@@ -239,6 +239,7 @@ ADR full text lives in `docs/adr/NNNN-*.md` (to be added).
 
 ## 14. Recent updates
 
+- **2026-05-10** — Phase 3 (Persistence) complete: Alembic initialized with `alembic.ini` + `env.py` reading `DATABASE_URL` from `Settings`; migration `0001_create_inference_logs.py` creates the table per PRD Section 5.2 (`SERIAL` PK, `TIMESTAMPTZ DEFAULT NOW()`, `VARCHAR(50)`, `JSONB`, `INT`, `FLOAT`, `INT`, `BOOLEAN DEFAULT FALSE`) plus `idx_timestamp`; ORM `InferenceLog` uses `JSONB().with_variant(JSON(), "sqlite")` for portable tests; `create_app` factory now also accepts a `session_factory`, builds one from `Settings.database_url` by default, and disposes the engine on shutdown; `/api/predict` inserts the row on the inference path and returns HTTP 500 ("Persistence Error") with full traceback in logs on `SQLAlchemyError` — never silently swallowed; tests: shared `conftest.py` fixture with sqlite-in-memory + `StaticPool` (schema persists across the request), `test_predict_persistence` asserts every PRD column on a read-back row and a `BrokenSession` factory exercises the DB-down 500 path. US-03 closed.
 - **2026-05-10** — Phase 2 (Inference API) complete: `PredictPayload`/`PredictResponse` Pydantic schemas with `extra="forbid"` and bounded `category`/`probability` fields; `create_app()` factory wires a lifespan singleton that resolves `ProductionModel`'s latest version via `MlflowClient.get_latest_versions` and loads it once with `mlflow.sklearn.load_model`; `POST /api/predict` measures latency strictly around `predict`/`predict_proba` (PRD 150ms budget), returns `HTTPException(500, "Inference Error")` on any inference failure (full traceback logged), Swagger/Redoc/openapi disabled by default (`enable_docs=False`), CORS allowlist sourced from `Settings.allowed_origins`. Three test tiers: unit (fake model — success, schema validation, exploding model 500, CORS allow/deny, docs disabled), integration (`file://` MLflow + train_and_register fixture), P95 latency (100 reqs, asserts `latency_ms` P95 < 150).
 - **2026-05-10** — Phase 1 (Model + Registry) complete: `Settings` reads `MLFLOW_TRACKING_URI` from env via `pydantic-settings`; `src.models.data` generates a 3-feature synthetic dataset and splits deterministically (seed=42, 60/20/20) — shape mirrors `PredictPayload`; `src.models.train` fits `RandomForestClassifier`, logs params + val/test metrics to MLflow, refuses to register below `BASELINE_TEST_ACCURACY=0.70`, registers as `ProductionModel`; stage-transition runbook documented in `backend/src/models/README.md`; `tests/test_data.py` covers shape/determinism/partitioning; `tests/test_train_smoke.py` runs train → register → `models:/ProductionModel/latest` load → predict against a `file://` tracking store. US-02 closed.
 - **2026-05-10** — Phase 0 scaffolding complete: git repo initialized; PRD layout (`backend/`, `frontend/`, `data/`, `.github/workflows/`, `docker-compose.yml`) in place; backend FastAPI skeleton with `/health` and Pytest fixture; Angular 22.0.0 frontend with zoneless bootstrap, Signals-ready, Tailwind v4 (`@tailwindcss/postcss`, CSS-first `@theme`), Vitest via `@angular/build:unit-test`; multi-stage Nginx image with `/api/` reverse proxy; docker-compose with healthchecks for `db`, `mlflow`, `backend_api`; CI workflow runs Pytest + Vitest + builds.

@@ -14,6 +14,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.api.config import Settings
+from src.api.db.session import SessionFactory
 from src.api.main import create_app
 from src.models.train import train_and_register
 
@@ -21,8 +22,10 @@ N_REQUESTS = 100
 P95_BUDGET_MS = 150
 
 
-@pytest.fixture(scope="module")
-def client(tmp_path_factory: pytest.TempPathFactory) -> TestClient:
+@pytest.fixture
+def client(
+    tmp_path_factory: pytest.TempPathFactory, session_factory: SessionFactory
+) -> TestClient:
     tmp = tmp_path_factory.mktemp("mlruns_latency")
     tracking_uri = f"file://{Path(tmp)}/mlruns"
     cfg = Settings(mlflow_tracking_uri=tracking_uri)
@@ -36,7 +39,7 @@ def client(tmp_path_factory: pytest.TempPathFactory) -> TestClient:
     finally:
         config_module.settings = original
 
-    app = create_app(cfg=cfg)
+    app = create_app(cfg=cfg, session_factory=session_factory)
     return TestClient(app)
 
 

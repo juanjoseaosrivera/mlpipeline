@@ -1,5 +1,6 @@
 """Integration test: train + register against a file:// MLflow store, then
-serve `/api/predict` using the default loader.
+serve `/api/predict` using the default loader. Uses the sqlite session
+factory from conftest so the inference row is actually persisted.
 """
 
 from __future__ import annotations
@@ -10,6 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.api.config import Settings
+from src.api.db.session import SessionFactory
 from src.api.main import create_app
 from src.models.train import train_and_register
 
@@ -32,9 +34,9 @@ def registered_model(tmp_path_factory: pytest.TempPathFactory) -> Settings:
     return cfg
 
 
-@pytest.fixture(scope="module")
-def client(registered_model: Settings) -> TestClient:
-    app = create_app(cfg=registered_model)
+@pytest.fixture
+def client(registered_model: Settings, session_factory: SessionFactory) -> TestClient:
+    app = create_app(cfg=registered_model, session_factory=session_factory)
     return TestClient(app)
 
 
