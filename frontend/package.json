@@ -1,0 +1,38 @@
+{
+  "name": "intelligent-detection-platform-frontend",
+  "version": "2.0.0",
+  "private": true,
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development",
+    "test": "ng test",
+    "lint": "ng lint"
+  },
+  "dependencies": {
+    "@angular/common": "22.0.0",
+    "@angular/compiler": "22.0.0",
+    "@angular/core": "22.0.0",
+    "@angular/forms": "22.0.0",
+    "@angular/platform-browser": "22.0.0",
+    "@angular/router": "22.0.0",
+    "rxjs": "7.8.1",
+    "tslib": "2.7.0"
+  },
+  "devDependencies": {
+    "@angular/build": "22.0.0",
+    "@angular/cli": "22.0.0",
+    "@angular/compiler-cli": "22.0.0",
+    "@tailwindcss/postcss": "4.0.0",
+    "@types/node": "22.7.0",
+    "angular-eslint": "22.0.0",
+    "eslint": "9.13.0",
+    "postcss": "8.4.47",
+    "prettier": "3.3.3",
+    "tailwindcss": "4.0.0",
+    "typescript": "5.9.0",
+    "typescript-eslint": "8.11.0",
+    "vitest": "2.1.3"
+  }
+}
