@@ -59,10 +59,18 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-        model, version = loader(cfg)
-        app.state.model = model
-        app.state.model_version = version
-        logger.info("model loaded: name=%s version=%s", cfg.model_name, version)
+        try:
+            model, version = loader(cfg)
+            app.state.model = model
+            app.state.model_version = version
+            logger.info("model loaded: name=%s version=%s", cfg.model_name, version)
+        except Exception as exc:
+            # No model registered yet (or MLflow unreachable). Stay up so
+            # /health and DB migrations work; /api/predict returns 503 via
+            # get_model until a model is trained.
+            app.state.model = None
+            app.state.model_version = None
+            logger.warning("model load failed; serving 503 from /api/predict: %s", exc)
 
         if session_factory is None:
             engine = build_engine(cfg.database_url)

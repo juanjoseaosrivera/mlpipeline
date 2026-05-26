@@ -61,24 +61,27 @@ docker-compose exec backend_api alembic upgrade head
 # 4. Train a baseline model and register it as ProductionModel
 docker-compose exec backend_api python -m src.models.train --seed 42
 
-# 5. Hit the API directly
+# 5. Restart the API so it picks up the freshly registered model
+docker-compose restart backend_api
+
+# 6. Hit the API directly
 curl -X POST http://localhost:8000/api/predict \
     -H "Content-Type: application/json" \
     -d '{"feature_1": 0.5, "feature_2": -0.3, "category": 2}'
 
-# 6. Or use the UI — open the workbench in a browser
+# 7. Or use the UI — open the workbench in a browser
 open http://localhost   # macOS;  use `xdg-open` on Linux
 ```
 
-Once those six steps complete, every UI prediction writes a row to PostgreSQL, MLflow tracks the model lineage, and Grafana renders the operational view.
+Once those steps complete, every UI prediction writes a row to PostgreSQL, MLflow tracks the model lineage, and Grafana renders the operational view.
 
 | Service     | URL                          | Notes                              |
 | ----------- | ---------------------------- | ---------------------------------- |
 | Angular UI  | http://localhost             | Nginx serves the SPA + proxies /api |
 | FastAPI     | http://localhost:8000        | `GET /health`, `POST /api/predict`  |
-| MLflow      | http://localhost:5000        | Model registry + run tracking       |
+| MLflow      | http://localhost:5001        | Model registry + run tracking       |
 | Grafana     | http://localhost:3000        | login `admin` / `admin`             |
-| PostgreSQL  | localhost:5432               | `ai_user` / `securepassword` (dev)  |
+| PostgreSQL  | localhost:5433               | `ai_user` / `securepassword` (dev)  |
 
 ## How to use it
 
@@ -179,8 +182,8 @@ mypy src
 pytest                    # enforces 80% coverage gate
 
 # Run the API against a local Postgres + MLflow (or the compose stack)
-export MLFLOW_TRACKING_URI=http://localhost:5000
-export DATABASE_URL=postgresql://ai_user:securepassword@localhost:5432/mlops_db
+export MLFLOW_TRACKING_URI=http://localhost:5001
+export DATABASE_URL=postgresql://ai_user:securepassword@localhost:5433/mlops_db
 uvicorn src.api.main:app --reload --port 8000
 ```
 
