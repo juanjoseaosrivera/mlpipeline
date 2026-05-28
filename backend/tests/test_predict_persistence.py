@@ -45,10 +45,10 @@ def test_successful_prediction_writes_inference_log_row(
         model_loader=lambda _c: (FakeModel(), "v7"),
         session_factory=session_factory,
     )
-    client = TestClient(app)
     payload = {"feature_1": 0.25, "feature_2": -1.5, "category": 3}
 
-    response = client.post("/api/predict", json=payload)
+    with TestClient(app) as client:
+        response = client.post("/api/predict", json=payload)
     assert response.status_code == 200
 
     with Session(sqlite_engine) as session:
@@ -88,11 +88,11 @@ def test_db_unavailable_returns_500(cfg: Settings) -> None:
         model_loader=lambda _c: (FakeModel(), "v7"),
         session_factory=broken_factory,  # type: ignore[arg-type]
     )
-    client = TestClient(app)
 
-    response = client.post(
-        "/api/predict",
-        json={"feature_1": 0.1, "feature_2": 0.2, "category": 1},
-    )
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/predict",
+            json={"feature_1": 0.1, "feature_2": 0.2, "category": 1},
+        )
     assert response.status_code == 500
     assert response.json() == {"detail": "Persistence Error"}

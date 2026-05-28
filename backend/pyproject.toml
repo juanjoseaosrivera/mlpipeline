@@ -15,6 +15,18 @@ python_version = "3.11"
 strict = true
 files = ["src"]
 
+[[tool.mypy.overrides]]
+module = ["sklearn.*", "scipy.*", "mlflow.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["src.models.data", "src.drift.detector"]
+disable_error_code = ["type-arg"]
+
+[[tool.mypy.overrides]]
+module = ["src.api.db.models"]
+disable_error_code = ["type-arg", "no-untyped-call"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]

@@ -21,7 +21,7 @@ import mlflow.sklearn
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, f1_score
 
-from src.api.config import settings
+from src.api import config
 from src.models.data import DEFAULT_SEED, generate_dataset, split_dataset
 
 logger = logging.getLogger(__name__)
@@ -30,6 +30,7 @@ BASELINE_TEST_ACCURACY: float = 0.70
 
 
 def train_and_register(seed: int = DEFAULT_SEED, n_estimators: int = 200) -> str:
+    settings = config.settings
     mlflow.set_tracking_uri(settings.mlflow_tracking_uri)
     mlflow.set_experiment(settings.experiment_name)
 

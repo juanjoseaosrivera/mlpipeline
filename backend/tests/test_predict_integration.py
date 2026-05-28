@@ -5,6 +5,7 @@ factory from conftest so the inference row is actually persisted.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -35,9 +36,12 @@ def registered_model(tmp_path_factory: pytest.TempPathFactory) -> Settings:
 
 
 @pytest.fixture
-def client(registered_model: Settings, session_factory: SessionFactory) -> TestClient:
+def client(
+    registered_model: Settings, session_factory: SessionFactory
+) -> Iterator[TestClient]:
     app = create_app(cfg=registered_model, session_factory=session_factory)
-    return TestClient(app)
+    with TestClient(app) as test_client:
+        yield test_client
 
 
 def test_predict_against_registered_model(client: TestClient) -> None:

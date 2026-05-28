@@ -8,6 +8,7 @@ body, which is measured strictly around `model.predict` /
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -25,7 +26,7 @@ P95_BUDGET_MS = 150
 @pytest.fixture
 def client(
     tmp_path_factory: pytest.TempPathFactory, session_factory: SessionFactory
-) -> TestClient:
+) -> Iterator[TestClient]:
     tmp = tmp_path_factory.mktemp("mlruns_latency")
     tracking_uri = f"file://{Path(tmp)}/mlruns"
     cfg = Settings(mlflow_tracking_uri=tracking_uri)
@@ -40,7 +41,8 @@ def client(
         config_module.settings = original
 
     app = create_app(cfg=cfg, session_factory=session_factory)
-    return TestClient(app)
+    with TestClient(app) as test_client:
+        yield test_client
 
 
 def test_p95_inference_latency_under_budget(client: TestClient) -> None:

@@ -7,6 +7,7 @@ factory comes from `conftest.py` (sqlite in-memory).
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from typing import Any
 
 import numpy as np
@@ -45,13 +46,14 @@ def cfg() -> Settings:
 
 
 @pytest.fixture
-def client(cfg: Settings, session_factory: SessionFactory) -> TestClient:
+def client(cfg: Settings, session_factory: SessionFactory) -> Iterator[TestClient]:
     app = create_app(
         cfg=cfg,
         model_loader=lambda _c: (FakeModel(), "fixture-v1"),
         session_factory=session_factory,
     )
-    return TestClient(app)
+    with TestClient(app) as test_client:
+        yield test_client
 
 
 def test_predict_returns_typed_response(client: TestClient) -> None:
@@ -96,11 +98,11 @@ def test_predict_returns_500_on_inference_failure(
         model_loader=lambda _c: (ExplodingModel(), "fixture-v1"),
         session_factory=session_factory,
     )
-    client = TestClient(app)
-    response = client.post(
-        "/api/predict",
-        json={"feature_1": 0.1, "feature_2": -0.4, "category": 2},
-    )
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/predict",
+            json={"feature_1": 0.1, "feature_2": -0.4, "category": 2},
+        )
     assert response.status_code == 500
     assert response.json() == {"detail": "Inference Error"}
 

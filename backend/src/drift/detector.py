@@ -22,7 +22,7 @@ from scipy import stats
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
-from src.api.config import settings
+from src.api import config
 from src.api.db.models import InferenceLog
 from src.api.db.session import build_engine, build_session_factory
 
@@ -117,7 +117,7 @@ def main() -> int:
     parser.add_argument("--alpha", type=float, default=ALPHA)
     args = parser.parse_args()
 
-    engine = build_engine(settings.database_url)
+    engine = build_engine(config.settings.database_url)
     factory = build_session_factory(engine)
     try:
         with factory() as session:
