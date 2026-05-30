@@ -29,9 +29,13 @@ coverage/
 .DS_Store
 
 # DVC
-/data/*
+/data/raw/
+/data/processed/
 !/data/.gitkeep
 *.dvc.tmp
+.dvc/cache
+.dvc/tmp
+.dvc/config.local
 
 # MLflow / artifacts
 mlruns/

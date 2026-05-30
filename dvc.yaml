@@ -1,0 +1,17 @@
+stages:
+  prepare:
+    wdir: backend
+    cmd: python -m src.models.prepare
+    deps:
+      - src/models/data.py
+      - src/models/prepare.py
+    outs:
+      - ../data/raw/dataset.csv
+
+  train:
+    wdir: backend
+    cmd: python -m src.models.train
+    deps:
+      - src/models/train.py
+      - src/models/data.py
+      - ../data/raw/dataset.csv

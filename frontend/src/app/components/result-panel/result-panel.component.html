@@ -1,0 +1,53 @@
+<section class="space-y-4" aria-live="polite">
+  <h2 class="text-sm font-semibold text-neutral-300">Result</h2>
+
+  @switch (state()) {
+    @case ('empty') {
+      <p class="text-sm text-neutral-500" data-testid="empty">
+        Submit to see a prediction.
+      </p>
+    }
+    @case ('loading') {
+      <div class="space-y-3" data-testid="loading">
+        <div class="h-4 w-1/3 rounded-sm bg-neutral-800 animate-pulse motion-reduce:animate-none"></div>
+        <div class="h-4 w-1/2 rounded-sm bg-neutral-800 animate-pulse motion-reduce:animate-none"></div>
+        <div class="h-4 w-1/4 rounded-sm bg-neutral-800 animate-pulse motion-reduce:animate-none"></div>
+      </div>
+    }
+    @case ('success') {
+      @if (result(); as r) {
+        <dl class="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-2 text-sm" data-testid="success">
+          <dt class="text-neutral-400">prediction</dt>
+          <dd class="font-mono tabular-nums text-neutral-100" data-testid="prediction">{{ r.prediction }}</dd>
+
+          <dt class="text-neutral-400">probability</dt>
+          <dd class="font-mono tabular-nums text-neutral-100" data-testid="probability">{{ formatProbability(r.probability) }}</dd>
+
+          <dt class="text-neutral-400">latency</dt>
+          <dd class="font-mono tabular-nums text-neutral-100" data-testid="latency">{{ r.latency_ms }} ms</dd>
+
+          <dt class="text-neutral-400">model</dt>
+          <dd class="font-mono tabular-nums text-neutral-100" data-testid="model-version">v{{ r.model_version }}</dd>
+        </dl>
+      }
+    }
+    @case ('error') {
+      @if (error(); as e) {
+        <div class="space-y-3" data-testid="error">
+          <p class="text-sm text-(--color-error-500)">{{ e.message }}</p>
+          @if (e.kind === 'server' || e.kind === 'unknown') {
+            <p class="text-xs text-neutral-500 font-mono tabular-nums">status {{ e.status }}</p>
+          }
+          <button
+            type="button"
+            (click)="onRetry()"
+            class="text-sm border border-neutral-700 rounded-sm px-3 py-1.5 hover:bg-neutral-900 focus:outline-none focus:ring-2 focus:ring-(--color-accent-500)"
+            data-testid="retry"
+          >
+            Retry
+          </button>
+        </div>
+      }
+    }
+  }
+</section>

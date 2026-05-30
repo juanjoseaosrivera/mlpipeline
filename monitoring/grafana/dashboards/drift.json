@@ -1,0 +1,74 @@
+{
+  "uid": "mlpipeline-drift",
+  "title": "MLPipeline — Inference & Drift",
+  "tags": ["mlpipeline", "drift"],
+  "schemaVersion": 39,
+  "timezone": "browser",
+  "refresh": "30s",
+  "time": { "from": "now-24h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Predictions per minute",
+      "datasource": { "type": "postgres", "uid": "inference-logs" },
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT time_bucket(INTERVAL '1 minute', timestamp) AS time, count(*) AS predictions FROM inference_logs WHERE $__timeFilter(timestamp) GROUP BY 1 ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Drift flag rate (per minute)",
+      "datasource": { "type": "postgres", "uid": "inference-logs" },
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT date_trunc('minute', timestamp) AS time, SUM(CASE WHEN is_drift_detected THEN 1 ELSE 0 END)::float / NULLIF(count(*), 0) AS drift_rate FROM inference_logs WHERE $__timeFilter(timestamp) GROUP BY 1 ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "P95 inference latency (ms)",
+      "datasource": { "type": "postgres", "uid": "inference-logs" },
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": { "unit": "ms", "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 150 }] } }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT date_trunc('minute', timestamp) AS time, percentile_cont(0.95) WITHIN GROUP (ORDER BY latency_ms) AS p95 FROM inference_logs WHERE $__timeFilter(timestamp) GROUP BY 1 ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Predicted class distribution (24h)",
+      "datasource": { "type": "postgres", "uid": "inference-logs" },
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT prediction::text AS class, count(*) AS n FROM inference_logs WHERE $__timeFilter(timestamp) GROUP BY 1 ORDER BY 1"
+        }
+      ]
+    }
+  ]
+}
